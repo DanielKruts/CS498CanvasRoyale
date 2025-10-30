@@ -1,0 +1,20 @@
+{
+    "manifest_version": 2,
+    "name": "Canvas Royale",
+    "version": "1.0",
+    "description": "A web extension for Canvas LMS",
+    "permissions": [
+        "*://*.instructure.com/*",
+        "activeTab"
+    ],
+    "content_scripts": [
+        {
+            "matches": ["https://*.instructure.com/*"],
+            "js": ["Content.js"]
+        }
+    ],
+    "icons": {
+        "48": "icon48.png",
+        "128": "icon128.png"
+    }
+}
