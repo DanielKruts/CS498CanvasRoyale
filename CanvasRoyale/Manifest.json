@@ -2,10 +2,11 @@
     "manifest_version": 2,
     "name": "Canvas Royale",
     "version": "1.0",
-    "description": "A web extension for Canvas LMS",
+    "description": "A web extension for Canvas LMS that gamifies learning with XP and ranks",
     "permissions": [
         "*://*.instructure.com/*",
-        "activeTab"
+        "activeTab",
+        "storage"
     ],
     "content_scripts": [
         {
