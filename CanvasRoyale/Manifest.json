@@ -13,6 +13,10 @@
         {
             "matches": ["https://*.instructure.com/*"],
             "js": ["Content.js"]
+        },
+        {
+            "matches": ["https://*.instructure.com/courses/*/assignments/*"],
+            "js": ["bonusXp.js"]
         }
     ]
 }
