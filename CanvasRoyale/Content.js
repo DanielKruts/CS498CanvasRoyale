@@ -1,3 +1,21 @@
+// Base XP value and state management (from incoming changes)
+const BASE_VALUE = {
+    xp: 10,
+    max_Xp: 100,
+    level: 1
+};
+
+function getXpState(callback) {
+    chrome.storage.sync.get({ xpState: BASE_VALUE }, ({ xpState }) => {
+        callback(xpState);
+    });
+}
+
+function setXpState(xpState, callback) {
+    chrome.storage.sync.set({ xpState }, callback);
+}
+
+// Your Canvas API integration for grade bonus XP
 (function () {
     console.log("[Canvas Royale] Injecting XP system...");
 
@@ -92,10 +110,10 @@
                     const percentage = (submission.score / pointsPossible) * 100;
                     const bonusXP = calculateGradeBonus(percentage);
                     
-                    console.log(`GRADE: ${submission.score}/${pointsPossible} = ${percentage.toFixed(1)}%`);
-                    console.log(`BONUS XP: ${bonusXP}`);
+                    console.log(`🎯 GRADE: ${submission.score}/${pointsPossible} = ${percentage.toFixed(1)}%`);
+                    console.log(`⭐ BONUS XP: ${bonusXP}`);
                 } else {
-                    console.log("No grade found for this assignment");
+                    console.log("❌ No grade found for this assignment");
                 }
             } else {
                 console.error(`[Canvas Royale] API Error: ${response.status} - ${response.statusText}`);
