@@ -33,70 +33,80 @@
 
     // Calculate grade bonus XP
     function calculateGradeBonus(percentage) {
-        if (percentage >= 97) return XP_CONFIG.GRADE_BONUS.A_PLUS;
-        if (percentage >= 93) return XP_CONFIG.GRADE_BONUS.A;
-        if (percentage >= 90) return XP_CONFIG.GRADE_BONUS.A_MINUS;
-        if (percentage >= 87) return XP_CONFIG.GRADE_BONUS.B_PLUS;
-        if (percentage >= 83) return XP_CONFIG.GRADE_BONUS.B;
-        if (percentage >= 80) return XP_CONFIG.GRADE_BONUS.B_MINUS;
-        if (percentage >= 77) return XP_CONFIG.GRADE_BONUS.C_PLUS;
-        if (percentage >= 73) return XP_CONFIG.GRADE_BONUS.C;
+        if (percentage >= 90) return XP_CONFIG.GRADE_BONUS.A;
+        if (percentage >= 80) return XP_CONFIG.GRADE_BONUS.B;
+        if (percentage >= 70) return XP_CONFIG.GRADE_BONUS.C;
         return XP_CONFIG.GRADE_BONUS.BELOW_C;
     }
 
-    // Check for new grades and award bonus XP
-    function checkForGrades() {
-        // Look for grade displays in various Canvas page types
-        const gradeSelectors = [
-            '.grade',
-            '.score',
-            '[data-testid="grade-display"]',
-            '.assignment-score',
-            '.points_possible',
-            '.grade-display'
-        ];
-        
-        gradeSelectors.forEach(selector => {
-            const gradeElements = document.querySelectorAll(selector);
-            gradeElements.forEach(element => {
-                if (element.dataset.xpProcessed) return; // Skip if already processed
-                
-                const gradeText = element.textContent.trim();
-                const percentage = parseGradePercentage(gradeText);
-                
-                if (percentage !== null) {
-                    element.dataset.xpProcessed = 'true';
-                    awardGradeBonus(percentage);
-                }
-            });
-        });
+    // Extract course/assignments IDs from URL
+    function extractCourseIDFromURL() {
+        const match = window.location.pathname.match(/\/courses\/(\d+)/);
+        return match ? match[1] : null;
     }
 
-    // Award grade bonus XP
-    function awardGradeBonus(percentage) {
-        const bonusXP = calculateGradeBonus(percentage);
+    function extractAssignmentIDfromURL() {
+        const match = window.location.pathname.match(/\/assignments\/(\d+)/);
+        return match ? match[1] : null;
+    }
+
+    // API-based grade checking
+    async function checkForGradesViaAPI() {
+        const courseID = extractCourseIDFromURL();
+        const assignmentID = extractAssignmentIDfromURL();
         
-        if (bonusXP !== 0) {
-            chrome.storage.local.get(['xp'], (result) => {
-                const newXP = (result.xp || 0) + bonusXP;
-                chrome.storage.local.set({ xp: newXP });
-                updateXPDisplay(newXP);
-                
-                const gradeMessage = percentage >= 90 ? "Great work!" : 
-                                   percentage >= 80 ? "Good job!" : "Keep trying!";
-                showXPAnimation(bonusXP, gradeMessage);
+        console.log(`[Canvas Royale] Course ID: ${courseID}, Assignment ID: ${assignmentID}`);
+        
+        if (!courseID || !assignmentID) {
+            console.log("[Canvas Royale] Not on an assignment page or missing IDs");
+            return;
+        }
+
+        try {
+            const token = '1139~GF4V6MfF7LwauzKZnFKhB6kvUBCC24F6HVKavLBC8f8mvBBzCcthB4YuatRvXMxE'; // Replace with your actual Canvas API token
+            const apiURL = `${window.location.origin}/api/v1/courses/${courseID}/assignments/${assignmentID}/submissions/self`;
+            
+            console.log(`[Canvas Royale] Making API call to: ${apiURL}`);
+            
+            const response = await fetch(apiURL, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
+
+            if (response.ok) {
+                const submission = await response.json();
+                console.log("[Canvas Royale] API Response:", submission);
+                
+                if (submission.score !== null) {
+                    // Try to get points possible from different possible locations
+                    let pointsPossible = submission.assignment?.points_possible || 
+                                       submission.points_possible || 
+                                       100; // Default assumption
+                    
+                    // If we have a grade like "93" and score "93", it might be out of 100
+                    if (submission.grade && submission.grade === submission.score.toString()) {
+                        pointsPossible = 100;
+                    }
+                    
+                    const percentage = (submission.score / pointsPossible) * 100;
+                    const bonusXP = calculateGradeBonus(percentage);
+                    
+                    console.log(`GRADE: ${submission.score}/${pointsPossible} = ${percentage.toFixed(1)}%`);
+                    console.log(`BONUS XP: ${bonusXP}`);
+                } else {
+                    console.log("No grade found for this assignment");
+                }
+            } else {
+                console.error(`[Canvas Royale] API Error: ${response.status} - ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error("[Canvas Royale] API grade check failed:", error);
         }
     }
 
-    // Award base assignment XP
-    function awardAssignmentXP() {
-        chrome.storage.local.get(['xp'], (result) => {
-            const baseXP = XP_CONFIG.ASSIGNMENT_BASE;
-            const newXP = (result.xp || 0) + baseXP;
-            chrome.storage.local.set({ xp: newXP });
-            updateXPDisplay(newXP);
-            showXPAnimation(baseXP, "Assignment viewed!");
-        });
-    }
+    // Initialize and test the grade checking
+    console.log("[Canvas Royale] Starting grade check...");
+    checkForGradesViaAPI();
+
 })();
