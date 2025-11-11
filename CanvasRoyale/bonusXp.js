@@ -54,17 +54,13 @@ async function processDueDate(dueDateElement) {
     // Parse the due date
     const parsedDate = parseDueDate(dueDateElement);
     
-    // Calculate total bonus XP (due date + grade)
-    const totalBonusXp = await calculateTotalBonusXP(parsedDate);
-    updateBonusXP(totalBonusXp);
+    // Calculate total bonus XP (due date + grade) - now handled by calculateAndDisplayBonusXP
+    console.log(`[Due Date Processing] Found due date, triggering integrated bonus calculation...`);
     
-    // Send message to background script if needed
-    chrome.runtime.sendMessage({ 
-        type: "BONUS_XP_CALCULATED", 
-        dueDateBonus: calculateBonusExp(parsedDate) || 0,
-        gradeBonus: await checkForGradeBonus(),
-        total: totalBonusXp
-    });
+    // Trigger the main bonus calculation function instead of the old separate logic
+    if (typeof window.calculateAndDisplayBonusXP === 'function') {
+        await window.calculateAndDisplayBonusXP();
+    }
 }
 // Waits for changes to the webpage's structure to give the webpage time
 // to load the due date element before trying to access it
@@ -127,71 +123,71 @@ function calculateBonusExp(dueDateParsed){
     return bonusXp;
 }
 
-// Check if it already exists (avoid duplicates)
-if (!document.getElementById("bonusxp-box")) {
-  // Create a container for the XP box
-  const box = document.createElement("div");
-  box.id = "bonusxp-box";
+// // Check if it already exists (avoid duplicates)
+// if (!document.getElementById("bonusxp-box")) {
+//   // Create a container for the XP box
+//   const box = document.createElement("div");
+//   box.id = "bonusxp-box";
   
-  // Set its contents (this can later be updated dynamically)
-  box.innerHTML = `
-    <div style="font-size:18px; font-weight:bold;">🏅 Bonus XP</div>
-    <div id="bonusxp-value" style="font-size:24px;">0</div>
-  `;
+//   // Set its contents (this can later be updated dynamically)
+//   box.innerHTML = `
+//     <div style="font-size:18px; font-weight:bold;">🏅 Bonus XP</div>
+//     <div id="bonusxp-value" style="font-size:24px;">0</div>
+//   `;
   
-  // Base positioning and layout styles
-  Object.assign(box.style, {
-    position: "fixed",
-    top: "100px",          // adjust to move vertically
-    left: "540.88px",      // adjust horizontally
-    padding: "15px 20px",
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-    fontFamily: "sans-serif",
-    zIndex: "9999",
-    width: "150px",
-    textAlign: "center",
-    transition: "background-color 0.3s, color 0.3s, box-shadow 0.3s"
-  });
+//   // Base positioning and layout styles
+//   Object.assign(box.style, {
+//     position: "fixed",
+//     top: "100px",          // adjust to move vertically
+//     left: "540.88px",      // adjust horizontally
+//     padding: "15px 20px",
+//     borderRadius: "12px",
+//     boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+//     fontFamily: "sans-serif",
+//     zIndex: "9999",
+//     width: "150px",
+//     textAlign: "center",
+//     transition: "background-color 0.3s, color 0.3s, box-shadow 0.3s"
+//   });
   
-  // Add to page
-  document.body.appendChild(box);
+//   // Add to page
+//   document.body.appendChild(box);
 
-  // Add adaptive theme styles
-  const style = document.createElement("style");
-  style.textContent = `
-    /* Light Mode */
-    @media (prefers-color-scheme: light) {
-      #bonusxp-box {
-        background-color: white;
-        color: black;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      }
-      #bonusxp-value {
-        color: #4caf50;
-      }
-    }
+//   // Add adaptive theme styles
+//   const style = document.createElement("style");
+//   style.textContent = `
+//     /* Light Mode */
+//     @media (prefers-color-scheme: light) {
+//       #bonusxp-box {
+//         background-color: white;
+//         color: black;
+//         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+//       }
+//       #bonusxp-value {
+//         color: #4caf50;
+//       }
+//     }
 
-    /* Dark Mode */
-    @media (prefers-color-scheme: dark) {
-      #bonusxp-box {
-        background-color: #1e1e1e;
-        color: #f1f1f1;
-        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
-      }
-      #bonusxp-value {
-        color: #8bc34a;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-}
+//     /* Dark Mode */
+//     @media (prefers-color-scheme: dark) {
+//       #bonusxp-box {
+//         background-color: #1e1e1e;
+//         color: #f1f1f1;
+//         box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+//       }
+//       #bonusxp-value {
+//         color: #8bc34a;
+//       }
+//     }
+//   `;
+//   document.head.appendChild(style);
+// }
 
 // Function to update Bonus XP value dynamically
-function updateBonusXP(value) {
-  const xpValue = document.getElementById("bonusxp-value");
-  if (xpValue) xpValue.textContent = value;
-}
+// function updateBonusXP(value) {
+//   const xpValue = document.getElementById("bonusxp-value");
+//   if (xpValue) xpValue.textContent = value;
+// }
 
 // Grade Bonus XP Configuration
 const GRADE_BONUS_CONFIG = {
@@ -231,7 +227,15 @@ async function checkForGradeBonus() {
     }
 
     try {
-        const token = '1139~GAkLm4nT6hYxyN8JVtuNmfGKxteCZ3vYWuhZmhDXHeNaYNMC94uyyuWr8ua8A9Mk'; // Temporary hardcoded token
+        // Get token from chrome storage (integrated with popup system)
+        const authData = await chrome.storage.local.get(['token']);
+        const token = authData.token;
+        
+        if (!token) {
+            console.log("[Grade Bonus] No API token found. Please configure in popup.");
+            return 0;
+        }
+        
         const apiURL = `${window.location.origin}/api/v1/courses/${courseID}/assignments/${assignmentID}/submissions/self`;
         const response = await fetch(apiURL, {
             headers: {
@@ -282,18 +286,37 @@ async function checkForGradeBonus() {
                 console.log("[DEBUG] Score:", submission.score);
                 console.log("[DEBUG] Grade:", submission.grade);
                 
-                // If we can't find points possible, try to infer from the grade
+                // If we don't have points possible, we need to fetch assignment data
                 if (!pointsPossible || pointsPossible === 100) {
-                    // Check if grade matches score (like "10" and 10)
-                    if (submission.grade && submission.grade === submission.score.toString()) {
-                        // This might be a case where it's actually out of the score value
-                        // For a 10/10 assignment, score=10, grade="10", we want pointsPossible=10
-                        pointsPossible = submission.score;
-                        console.log("[DEBUG] Inferred points possible from score:", pointsPossible);
-                    } else {
-                        // Default fallback
+                    try {
+                        console.log("[DEBUG] Fetching assignment data to get real points possible...");
+                        const assignmentApiURL = `${window.location.origin}/api/v1/courses/${courseID}/assignments/${assignmentID}`;
+                        const assignmentResponse = await fetch(assignmentApiURL, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (assignmentResponse.ok) {
+                            const assignmentData = await assignmentResponse.json();
+                            pointsPossible = assignmentData.points_possible || pointsPossible;
+                            console.log("[DEBUG] Retrieved points possible from assignment:", pointsPossible);
+                        } else {
+                            console.log("[DEBUG] Could not fetch assignment data, using fallback");
+                            pointsPossible = pointsPossible || 100;
+                        }
+                    } catch (error) {
+                        console.log("[DEBUG] Error fetching assignment data:", error);
                         pointsPossible = pointsPossible || 100;
                     }
+                } else {
+                    console.log("[DEBUG] Using submission points possible:", pointsPossible);
+                }
+                
+                // Check if assignment has been submitted
+                if (!submission.submitted_at || !submission.score && submission.score !== 0) {
+                    console.log("[Grade Bonus] Assignment not submitted yet - no grade bonus");
+                    return 0;
                 }
                 
                 const percentage = (submission.score / pointsPossible) * 100;
@@ -342,7 +365,15 @@ async function calculateSubmissionTimingBonus(dueDateParsed) {
         }
 
         const courseId = extractCourseIDFromURL();
-        const token = '1139~GAkLm4nT6hYxyN8JVtuNmfGKxteCZ3vYWuhZmhDXHeNaYNMC94uyyuWr8ua8A9Mk'; // Use same token as grade bonus
+        
+        // Get token from chrome storage (integrated with popup system)
+        const authData = await chrome.storage.local.get(['token']);
+        const token = authData.token;
+        
+        if (!token) {
+            console.log("[Submission Timing] No API token found. Please configure in popup.");
+            return 0;
+        }
         
         const apiURL = `${window.location.origin}/api/v1/courses/${courseId}/assignments/${assignmentId}/submissions/self`;
         const response = await fetch(apiURL, {
@@ -365,16 +396,21 @@ async function calculateSubmissionTimingBonus(dueDateParsed) {
         const submissionDate = new Date(submission.submitted_at);
         console.log(`SUBMISSION DATE: ${submissionDate.toLocaleDateString()}, ${submissionDate.toLocaleTimeString()}`);
         
-        // Parse due date - convert parsed due date back to Date object
+        // Parse due date - handle both parsed date objects and Date objects
         let dueDate;
-        if (dueDateParsed.month && dueDateParsed.day) {
-            // Assume current year if not specified
+        if (dueDateParsed instanceof Date) {
+            // Already a Date object - use it directly
+            dueDate = dueDateParsed;
+            console.log(`[Submission Timing] Using Date object: ${dueDate}`);
+        } else if (dueDateParsed.month && dueDateParsed.day) {
+            // Parsed date object - convert to Date
             const year = dueDateParsed.year || new Date().getFullYear();
             const monthIndex = getMonthNumber(dueDateParsed.month);
             dueDate = new Date(year, monthIndex, dueDateParsed.day, 23, 59, 59); // End of due date
+            console.log(`[Submission Timing] Converted parsed date to Date object: ${dueDate}`);
         }
         
-        if (!dueDate) {
+        if (!dueDate || isNaN(dueDate.getTime())) {
             console.log("[Submission Timing] Could not parse due date");
             return 0;
         }
@@ -394,9 +430,9 @@ async function calculateSubmissionTimingBonus(dueDateParsed) {
             timingBonus = Math.min(daysDifference * 5, 50); // Max 50 XP for early submission
             console.log(`EARLY SUBMISSION: ${daysDifference} days early = ${timingBonus} XP bonus`);
         } else if (daysDifference < 0) {
-            // Submitted late - penalty
-            timingBonus = Math.max(daysDifference * 2, -20); // Max -20 XP penalty for late
-            console.log(`LATE SUBMISSION: ${Math.abs(daysDifference)} days late = ${timingBonus} XP penalty`);
+            // Submitted late - no bonus (0 XP instead of penalty)
+            timingBonus = 0;
+            console.log(`LATE SUBMISSION: ${Math.abs(daysDifference)} days late = 0 XP (no bonus)`);
         } else {
             // Submitted on due date
             console.log(`ON TIME SUBMISSION: No bonus or penalty`);
@@ -409,4 +445,131 @@ async function calculateSubmissionTimingBonus(dueDateParsed) {
         return 0;
     }
 }
+
+// Flag to prevent duplicate bonus calculations
+let bonusCalculationInProgress = false;
+let calculatedAssignments = new Set();
+
+// Enhanced function to calculate and display total bonus XP
+async function calculateAndDisplayBonusXP() {
+    try {
+        const assignmentKey = window.location.pathname;
+        
+        // Prevent duplicate calculations
+        if (bonusCalculationInProgress) {
+            console.log("[Bonus XP] Calculation already in progress, skipping...");
+            return 0;
+        }
+        
+        if (calculatedAssignments.has(assignmentKey)) {
+            console.log("[Bonus XP] Bonus already calculated for this assignment, skipping...");
+            return 0;
+        }
+        
+        bonusCalculationInProgress = true;
+        console.log("[Bonus XP] Starting bonus calculation...");
+        
+        // Calculate grade bonus
+        const gradeBonus = await checkForGradeBonus();
+        
+        // Calculate timing bonus (need due date)
+        let timingBonus = 0;
+        try {
+            // Try to extract due date from the page using multiple selectors
+            const dueDateElement = document.querySelector('[data-testid="due-date"]') || 
+                                 document.querySelector('[data-testid="due-date-display"]') ||
+                                 document.querySelector('.assignment-due-date') ||
+                                 document.querySelector('[class*="due"]') ||
+                                 document.querySelector('time[datetime]');
+            
+            if (dueDateElement) {
+                console.log(`[Bonus XP] Found due date element:`, dueDateElement);
+                
+                // Try different ways to get the due date
+                let dueDateParsed;
+                if (dueDateElement.hasAttribute('datetime')) {
+                    dueDateParsed = new Date(dueDateElement.getAttribute('datetime'));
+                    console.log(`[Bonus XP] Using datetime attribute: ${dueDateElement.getAttribute('datetime')}`);
+                } else {
+                    const dueDateText = dueDateElement.textContent;
+                    console.log(`[Bonus XP] Using text content: ${dueDateText}`);
+                    dueDateParsed = new Date(dueDateText);
+                }
+                
+                if (!isNaN(dueDateParsed.getTime())) {
+                    console.log(`[Bonus XP] Parsed due date: ${dueDateParsed}`);
+                    console.log(`[Bonus XP] Calling calculateSubmissionTimingBonus with:`, dueDateParsed);
+                    timingBonus = await calculateSubmissionTimingBonus(dueDateParsed);
+                    console.log(`[Bonus XP] Received timing bonus result: ${timingBonus}`);
+                } else {
+                    console.log(`[Bonus XP] Could not parse due date`);
+                }
+            } else {
+                console.log(`[Bonus XP] No due date element found on page`);
+            }
+        } catch (error) {
+            console.log("[Bonus XP] Error calculating timing bonus:", error);
+        }
+        
+        const totalBonus = gradeBonus + timingBonus;
+        
+        console.log(`[Bonus XP] Calculated: Grade=${gradeBonus}, Timing=${timingBonus}, Total=${totalBonus}`);
+        
+        // Only award XP if assignment is actually submitted
+        if (gradeBonus === 0 && timingBonus === 0) {
+            console.log(`[Bonus XP] No bonuses to award (assignment may not be submitted)`);
+            
+            // Update the Canvas Royale widget display first
+            if (typeof window.updateCanvasRoyaleBonusDisplay === 'function') {
+                window.updateCanvasRoyaleBonusDisplay(totalBonus, gradeBonus, timingBonus);
+            }
+            
+            // Mark calculation as complete but don't award XP
+            calculatedAssignments.add(assignmentKey);
+            bonusCalculationInProgress = false;
+            return 0;
+        }
+        
+        // Update the Canvas Royale widget display first
+        if (typeof window.updateCanvasRoyaleBonusDisplay === 'function') {
+            window.updateCanvasRoyaleBonusDisplay(totalBonus, gradeBonus, timingBonus);
+        } else {
+            console.log("[Bonus XP] Canvas Royale widget not available for update");
+        }
+        
+        // Actually award the bonus XP if there is any
+        if (totalBonus !== 0) {
+            const reason = totalBonus > 0 ? "assignment bonus" : "assignment penalty";
+            if (typeof window.awardSubmissionXp === 'function') {
+                window.awardSubmissionXp(totalBonus, reason);
+                console.log(`[Bonus XP] Awarded ${totalBonus} XP as ${reason}`);
+            } else if (typeof window.addXP === 'function') {
+                window.addXP(totalBonus, reason);
+                console.log(`[Bonus XP] Awarded ${totalBonus} XP as ${reason}`);
+            } else {
+                console.log("[Bonus XP] No XP award function available");
+            }
+        }
+        
+        // Mark calculation as complete
+        calculatedAssignments.add(assignmentKey);
+        bonusCalculationInProgress = false;
+        
+        return totalBonus;
+        
+    } catch (error) {
+        console.error("[Bonus XP] Error in calculateAndDisplayBonusXP:", error);
+        bonusCalculationInProgress = false; // Reset flag on error
+        return 0;
+    }
+}
+
+// Make functions available globally for integration
+window.calculateAndDisplayBonusXP = calculateAndDisplayBonusXP;
+window.checkForGradeBonus = checkForGradeBonus;
+window.calculateSubmissionTimingBonus = calculateSubmissionTimingBonus;
+
+// Don't automatically run bonus calculation - let it be triggered by submission detection
+console.log("[Bonus XP] Functions ready for integration");
+
 // dueDateParser(dueDateElement);

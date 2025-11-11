@@ -102,6 +102,20 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
             console.error("[Canvas Ranked] Error processing submission:", err);
         }
     }
+
+    // New handler for bonus XP checks
+    if (msg.type === "checkBonusXP") {
+        try {
+            console.log("[Canvas Ranked] Bonus XP check requested");
+            // Send message to the same tab to trigger bonus calculation
+            chrome.tabs.sendMessage(sender.tab.id, { 
+                type: "triggerBonusCalculation",
+                url: msg.url 
+            });
+        } catch (err) {
+            console.error("[Canvas Ranked] Error triggering bonus calculation:", err);
+        }
+    }
 });
 
 chrome.runtime.onInstalled.addListener(() => {
