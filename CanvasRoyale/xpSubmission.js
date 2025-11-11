@@ -1,3 +1,5 @@
+// THIS FILE WORKS, CAN DETECT SUBMISSION AND TEST BUTTON COMBO OF ALT X
+// CLEAN UP FILE AND REMOVE TEST CODE NO LONGER NEEDED
 // RIGHT CLICK THE PAGE, INSPECT, GO TO CONSOLE, AND CHECK LOGS FOR XP AWARDING
 // This file is Kaelin's part of the assignment. This will handle awarding a base amount of xp, 
 // and detect when an assignment is submitted, or has already been submitted when the page loads.
@@ -15,6 +17,8 @@ const BASE_STATE = {
   maxXp: 100,
   level: 1,
 };
+
+
 
 // Increase the XP needed each level
 function growMaxXp(oldMax) {
@@ -91,6 +95,8 @@ function getAssignmentKey() {
   // e.g. "/courses/123/assignments/456"
   return window.location.pathname;
 }
+
+
 
 // Backup submission check for DOM text for submission indicators
 // Find the specific span that shows "SUBMITTED: ..."
