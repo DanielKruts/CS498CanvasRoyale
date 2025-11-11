@@ -448,7 +448,7 @@ async function calculateSubmissionTimingBonus(dueDateParsed) {
 
 // Flag to prevent duplicate bonus calculations
 let bonusCalculationInProgress = false;
-let calculatedAssignments = new Set();
+// Note: Removed calculatedAssignments Set - now using chrome.storage.local for persistence
 
 // Enhanced function to calculate and display total bonus XP
 async function calculateAndDisplayBonusXP() {
@@ -461,7 +461,11 @@ async function calculateAndDisplayBonusXP() {
             return 0;
         }
         
-        if (calculatedAssignments.has(assignmentKey)) {
+        // Check persistent storage for duplicate prevention
+        const storageResult = await chrome.storage.local.get(['bonusCalculatedAssignments']);
+        const calculatedAssignments = storageResult.bonusCalculatedAssignments || {};
+        
+        if (calculatedAssignments[assignmentKey]) {
             console.log("[Bonus XP] Bonus already calculated for this assignment, skipping...");
             return 0;
         }
@@ -525,7 +529,8 @@ async function calculateAndDisplayBonusXP() {
             }
             
             // Mark calculation as complete but don't award XP
-            calculatedAssignments.add(assignmentKey);
+            calculatedAssignments[assignmentKey] = true;
+            await chrome.storage.local.set({ bonusCalculatedAssignments: calculatedAssignments });
             bonusCalculationInProgress = false;
             return 0;
         }
@@ -551,8 +556,9 @@ async function calculateAndDisplayBonusXP() {
             }
         }
         
-        // Mark calculation as complete
-        calculatedAssignments.add(assignmentKey);
+        // Mark calculation as complete in persistent storage
+        calculatedAssignments[assignmentKey] = true;
+        await chrome.storage.local.set({ bonusCalculatedAssignments: calculatedAssignments });
         bonusCalculationInProgress = false;
         
         return totalBonus;
