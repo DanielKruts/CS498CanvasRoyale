@@ -23,3 +23,6 @@ As a student, I want to get extra XP for high grades so that doing well in class
         - The extension uses Canvas’s grade data to calculate bonus XP 
         - Higher grades give a bigger bonus 
         - Top 10% of the class gets an additional XP boost 
+
+# Test Access Token
+1139~t6wfJMr8mBz9Q2CTPyQ4Fn4ZAJ6nA2ZJQKWatJkCfvt8GCf9DnJJhn8rHRcGMG6E

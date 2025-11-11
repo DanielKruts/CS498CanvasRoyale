@@ -40,7 +40,46 @@
         return { xp, maxXp, level, leveledUp };
     }
 
-    function awardSubmissionXp(amount, reason = "submission") {
+    // Function called by bonusXp.js to update bonus displays
+    window.updateCanvasRoyaleBonusDisplay = function(totalBonus, gradeBonus, timingBonus) {
+        console.log(`[Canvas Royale] Global bonus update called: Total=${totalBonus}, Grade=${gradeBonus}, Timing=${timingBonus}`);
+        
+        // Find the Canvas Royale widget
+        const widget = document.getElementById('canvas-royale-widget');
+        if (widget) {
+            console.log('[Canvas Royale] Widget found, updating bonus display...');
+            updateBonusXPDisplay(widget, totalBonus, gradeBonus, timingBonus);
+        } else {
+            console.log('[Canvas Royale] Widget not found for bonus update - retrying in 500ms...');
+            // Retry after a short delay in case widget isn't ready yet
+            setTimeout(() => {
+                const retryWidget = document.getElementById('canvas-royale-widget');
+                if (retryWidget) {
+                    console.log('[Canvas Royale] Widget found on retry, updating bonus display...');
+                    updateBonusXPDisplay(retryWidget, totalBonus, gradeBonus, timingBonus);
+                } else {
+                    console.log('[Canvas Royale] Widget still not found after retry');
+                }
+            }, 500);
+        }
+    };
+
+    // Function to trigger bonus XP calculation
+    function checkAndUpdateBonusXP() {
+        // This will work with the bonusXp.js script to calculate and display bonuses
+        try {
+            // Send message to background script to trigger bonus calculation
+            chrome.runtime.sendMessage({
+                type: 'checkBonusXP',
+                url: window.location.href
+            });
+        } catch (error) {
+            console.log('[Canvas Royale] Error checking bonus XP:', error);
+        }
+    }
+
+    // Enhanced function to handle all XP updates including bonuses
+    function addXP(amount, reason = 'Submission') {
         chrome.storage.local.get([XP_STATE_KEY], (result) => {
             const prev = result[XP_STATE_KEY] || BASE_STATE;
             const next = applyXp(prev, amount);
@@ -75,6 +114,15 @@
             });
         });
     }
+
+    // Alias function for compatibility with existing code
+    function awardSubmissionXp(amount, reason) {
+        addXP(amount, reason);
+    }
+
+    // Make XP functions available globally for bonusXp.js integration
+    window.addXP = addXP;
+    window.awardSubmissionXp = awardSubmissionXp;
 
     // ===== WIDGET UI (From XPwidget content.js) =====
     function checkConnectionAndInitialize() {
@@ -162,6 +210,7 @@
         // Test Bonus button
         widget.querySelector("#testBonus").addEventListener("click", function () {
             console.log("[Canvas Royale] Test Bonus clicked");
+            // Test XP award with bonuses
             awardSubmissionXp(75, "test bonus");
         });
 
@@ -210,6 +259,15 @@
         if (xpBar) {
             xpBar.style.width = percentage + '%';
         }
+    }
+
+    // Function to update bonus XP display (simplified - bonuses work behind the scenes)
+    function updateBonusXPDisplay(widget, totalBonus, gradeBonus, timingBonus) {
+        console.log(`[Canvas Royale] Bonus XP calculated: Total=${totalBonus}, Grade=${gradeBonus}, Timing=${timingBonus}`);
+        console.log(`[Canvas Royale] Bonuses are automatically added to total XP progression`);
+        
+        // Note: Bonus XP breakdown is no longer displayed in the widget,
+        // but bonuses are still calculated and added to the player's total XP
     }
 
     function animateLevelUp(widget, currentXP, newXP, amount) {
@@ -336,19 +394,25 @@
 
                 console.log("[Canvas Royale] First time awarding XP for this assignment. Proceeding.");
                 
-                // Award base XP + try to get bonus XP
+                // Award base XP
                 awardSubmissionXp(SUBMISSION_XP_VALUE, "base submission");
                 
-                // Try to get bonus XP from the advanced bonus system
-                if (typeof window.calculateTotalBonusXP === 'function') {
-                    console.log("[Canvas Royale] Attempting to calculate bonus XP...");
-                    // This would integrate with bonusXp.js if available
-                }
+                // Check for bonus XP with a small delay to ensure everything is ready
+                console.log("[Canvas Royale] Checking for bonus XP...");
+                setTimeout(() => {
+                    checkAndUpdateBonusXP();
+                }, 500); // Small delay to ensure widget and scripts are ready
             });
         });
     }
 
     function setupRealSubmissionDetection() {
+        // Only run submission detection on assignment pages
+        if (!window.location.pathname.includes('/assignments/')) {
+            console.log("[Canvas Royale] Not on assignment page, skipping submission detection");
+            return;
+        }
+        
         if (pageShowsSubmitted()) {
             console.log("[Canvas Royale] Submission already present on load.");
             handleSubmissionDetected();
@@ -410,6 +474,24 @@
         
         console.log("[Canvas Royale] Combined system initialization complete!");
     }
+
+    // Message listener for background script communications
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.type === "xpUpdated") {
+            // Update widget when XP changes
+            updateDisplay(message.xp);
+        } else if (message.type === "triggerBonusCalculation") {
+            console.log("[Canvas Royale] Triggered bonus calculation from background");
+            // Call the bonus calculation function if available
+            if (typeof window.calculateAndDisplayBonusXP === 'function') {
+                window.calculateAndDisplayBonusXP();
+            }
+        } else if (message.type === "checkConnection") {
+            console.log("[Canvas Royale] Received checkConnection message from popup");
+            // Re-check connection and show/hide widget accordingly
+            checkConnectionAndInitialize();
+        }
+    });
 
     // Start when ready
     if (document.readyState === "loading") {
