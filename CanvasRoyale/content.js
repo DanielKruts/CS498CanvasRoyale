@@ -66,16 +66,28 @@
 
     // Function to trigger bonus XP calculation
     function checkAndUpdateBonusXP() {
-        // This will work with the bonusXp.js script to calculate and display bonuses
-        try {
-            // Send message to background script to trigger bonus calculation
-            chrome.runtime.sendMessage({
-                type: 'checkBonusXP',
-                url: window.location.href
-            });
-        } catch (error) {
-            console.log('[Canvas Royale] Error checking bonus XP:', error);
-        }
+        // Check if XP has already been awarded for this assignment
+        const assignmentKey = getAssignmentKey();
+        chrome.storage.local.get([AWARDED_ASSIGNMENTS_KEY, "bonusCalculatedAssignments"], (result) => {
+            const awarded = result[AWARDED_ASSIGNMENTS_KEY] || {};
+            const bonusCalculated = result.bonusCalculatedAssignments || {};
+
+            if (awarded[assignmentKey] || bonusCalculated[assignmentKey]) {
+                console.log("[Canvas Royale] XP already awarded for this assignment. Skipping bonus calculation.");
+                return;
+            }
+
+            // Only proceed with bonus calculation if no XP has been awarded yet
+            try {
+                // Send message to background script to trigger bonus calculation
+                chrome.runtime.sendMessage({
+                    type: 'checkBonusXP',
+                    url: window.location.href
+                });
+            } catch (error) {
+                console.log('[Canvas Royale] Error checking bonus XP:', error);
+            }
+        });
     }
 
     // Enhanced function to handle all XP updates including bonuses
@@ -375,18 +387,28 @@
 
         const assignmentKey = getAssignmentKey();
 
-        chrome.storage.local.get([AWARDED_ASSIGNMENTS_KEY], (result) => {
+        chrome.storage.local.get([AWARDED_ASSIGNMENTS_KEY, "bonusCalculatedAssignments"], (result) => {
             const awarded = result[AWARDED_ASSIGNMENTS_KEY] || {};
+            const bonusCalculated = result.bonusCalculatedAssignments || {};
 
             if (awarded[assignmentKey]) {
-                console.log("[Canvas Royale] XP for this assignment was already awarded before. Skipping.");
+                console.log("[Canvas Royale] XP for this assignment was already awarded before. Skipping all XP awards.");
                 return;
             }
 
-            // Mark this assignment as awarded
-            awarded[assignmentKey] = true;
+            if (bonusCalculated[assignmentKey]) {
+                console.log("[Canvas Royale] Bonus XP for this assignment was already calculated. Skipping all XP awards.");
+                return;
+            }
 
-            chrome.storage.local.set({ [AWARDED_ASSIGNMENTS_KEY]: awarded }, () => {
+            // Mark this assignment as awarded (for both base and bonus XP)
+            awarded[assignmentKey] = true;
+            bonusCalculated[assignmentKey] = true;
+
+            chrome.storage.local.set({ 
+                [AWARDED_ASSIGNMENTS_KEY]: awarded,
+                bonusCalculatedAssignments: bonusCalculated 
+            }, () => {
                 if (chrome.runtime.lastError) {
                     console.error("[Canvas Royale] Error saving awarded assignment map:", chrome.runtime.lastError);
                     return;
@@ -413,26 +435,40 @@
             return;
         }
         
-        if (pageShowsSubmitted()) {
-            console.log("[Canvas Royale] Submission already present on load.");
-            handleSubmissionDetected();
-            return;
-        }
+        // Check if this assignment has already been awarded XP before doing anything
+        const assignmentKey = getAssignmentKey();
+        chrome.storage.local.get([AWARDED_ASSIGNMENTS_KEY, "bonusCalculatedAssignments"], (result) => {
+            const awarded = result[AWARDED_ASSIGNMENTS_KEY] || {};
+            const bonusCalculated = result.bonusCalculatedAssignments || {};
 
-        console.log("[Canvas Royale] Watching for submission confirmation...");
-
-        const observer = new MutationObserver(() => {
-            if (pageShowsSubmitted()) {
-                console.log("[Canvas Royale] Detected submitted span: assignment is submitted.");
-                handleSubmissionDetected();
-                observer.disconnect();
+            if (awarded[assignmentKey] || bonusCalculated[assignmentKey]) {
+                console.log("[Canvas Royale] XP already awarded for this assignment. No further XP will be given.");
+                xpAwardedForThisPage = true; // Prevent any further XP awards
+                return;
             }
-        });
 
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            characterData: true,
+            // Only proceed with submission detection if no XP has been awarded
+            if (pageShowsSubmitted()) {
+                console.log("[Canvas Royale] Submission already present on load.");
+                handleSubmissionDetected();
+                return;
+            }
+
+            console.log("[Canvas Royale] Watching for submission confirmation...");
+
+            const observer = new MutationObserver(() => {
+                if (pageShowsSubmitted()) {
+                    console.log("[Canvas Royale] Detected submitted span: assignment is submitted.");
+                    handleSubmissionDetected();
+                    observer.disconnect();
+                }
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+            });
         });
     }
 
