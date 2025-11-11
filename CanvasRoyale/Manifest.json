@@ -2,8 +2,9 @@
     "manifest_version": 3,
     "name": "Canvas Royale",
     "version": "1.0",
-    "description": "A web extension for Canvas LMS",
+    "description": "A web extension for Canvas LMS that gamifies learning with XP and ranks",
     "permissions": [
+        "storage",
         "activeTab"
     ],
     "host_permissions": [
@@ -20,5 +21,9 @@
             ],
             "js": ["bonusXp.js"]
         }
-    ]
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Canvas Royale"
+    }
 }
