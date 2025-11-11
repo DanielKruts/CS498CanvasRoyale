@@ -9,10 +9,16 @@
     "host_permissions": [
         "https://*.instructure.com/*"
     ],
+    "web_accessible_resources": [
+        {
+            "resources": ["Assets/*.png"],
+            "matches": ["https://*.instructure.com/*"]
+        }
+    ],
     "content_scripts": [
         {
             "matches": ["https://*.instructure.com/*"],
-            "js": ["Content.js"]
+            "js": ["Content.js","Ranks.js"]
         },
         {
             "matches": [
