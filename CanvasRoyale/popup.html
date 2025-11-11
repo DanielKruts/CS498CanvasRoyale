@@ -1,25 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Canvas Ranked</title>
     <style>
         body {
-            width: 200px;
-            padding: 10px;
             font-family: Arial, sans-serif;
+            width: 320px;
+            padding: 15px;
         }
-        h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-        }
-        p {
+
+        input {
+            width: 100%;
             margin: 5px 0;
-            font-size: 14px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            margin: 8px 0;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        #authStatus {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #ddd;
+        }
+
+        hr {
+            margin: 15px 0;
+            border: none;
+            border-top: 1px solid #eee;
+        }
+
+        .section {
+            margin: 15px 0;
+        }
+
+            .section h3 {
+                margin: 10px 0 5px 0;
+                color: #333;
+            }
+
+        .info-text {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <h3>Canvas Royale</h3>
-    <p>Extension is active!</p>
-    <p>Check console on Canvas assignment pages.</p>
+    <h2>Canvas Ranked</h2>
+
+    <div id="authStatus">Checking connection...</div>
+
+    <div id="setupSection" class="section">
+        <h3>Connect to Canvas</h3>
+        <label>Canvas Domain:</label>
+        <input id="canvasDomain" placeholder="your-school.instructure.com">
+        <label>Access Token:</label>
+        <input id="accessToken" type="password" placeholder="Paste your access token here">
+        <button id="saveSettings" style="background: #4CAF50; color: white;">Connect to Canvas</button>
+        <button id="connectCanvas">How to Get Access Token</button>
+    </div>
+
+    <div id="connectedSection" class="section" style="display: none;">
+        <h3>Connected!</h3>
+        <p>The widget is now active on Canvas pages.</p>
+
+        <div class="info-text">
+            Use the widget on Canvas pages to manage XP and track submissions.
+        </div>
+
+        <button id="disconnectCanvas" style="background: #ff9800; color: white;">Disconnect from Canvas</button>
+    </div>
+
+    <script src="popup.js"></script>
 </body>
 </html>
