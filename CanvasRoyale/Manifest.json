@@ -15,7 +15,9 @@
             "js": ["Content.js"]
         },
         {
-            "matches": ["https://*.instructure.com/courses/*/assignments/*"],
+            "matches": [
+                "https://*.instructure.com/courses/*/assignments/*"
+            ],
             "js": ["bonusXp.js"]
         }
     ]
