@@ -10,11 +10,6 @@
     "host_permissions": [
         "*://*.instructure.com/*"
     ],
-    "service_workers":{
-        "background": {
-            "scripts": ["Background.js"]
-        }
-    },
     "content_scripts": [
         {
             "matches": ["https://*.instructure.com/*"],
