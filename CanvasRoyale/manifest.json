@@ -1,0 +1,35 @@
+{
+    "manifest_version": 3,
+    "name": "Canvas Royale",
+    "version": "1.0.0",
+    "description": "Advanced XP system for Canvas LMS - Earn XP for assignments with grade bonuses and timing rewards!",
+    "permissions": [
+        "storage",
+        "activeTab",
+        "scripting",
+        "tabs"
+    ],
+    "host_permissions": [
+        "https://*.instructure.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://*.instructure.com/*"],
+            "js": ["content.js", "bonusXp.js"],
+            "run_at": "document_end"
+        }
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Canvas Royale - XP System"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": ["content.js", "bonusXp.js"],
+            "matches": ["https://*.instructure.com/*"]
+        }
+    ]
+}
