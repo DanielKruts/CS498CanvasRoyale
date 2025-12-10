@@ -5,6 +5,26 @@
 
     console.log("[Canvas Royale] COMBINED CONTENT SCRIPT LOADED!");
 
+       // --- Safety stub for applyRankTheme to avoid runtime errors ---
+    function applyRankTheme(widget, rankName) {
+        // You can leave this empty or log for debugging:
+        // console.log("[Canvas Royale] applyRankTheme called for", rankName);
+    }
+
+    (function injectXpFlashStyles() {
+    if (document.getElementById("xp-flash-style")) return;
+
+    const style = document.createElement("style");
+    style.id = "xp-flash-style";
+    style.textContent = `
+        .xp-gain-flash {
+            box-shadow: 0 0 16px #00e5ff, 0 0 28px #00e5ff !important;
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+
     // ===== CONFIGURATION =====
     const XP_STATE_KEY = "xpState";
     const SUBMISSION_XP_VALUE = 50; // Base XP per assignment
@@ -192,26 +212,51 @@
             <div style="text-align:center; font-size:10px; color:#A5D6A7; margin-bottom:10px;">Advanced XP System Active</div>
             
             <div id="rank-info" style="margin-bottom:12px;">
+
+                <!-- 1) Rank row (Top of widget) -->
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <img
+                            id="rank-icon"
+                            src=""
+                            alt="Rank badge"
+                            style="width:28px; height:28px; border-radius:50%; background:#1B5E20; object-fit:contain;"
+                        />
+                        <span id="rank-name" style="font-size:11px; color:#C8E6C9;">Unranked</span>
+                    </div>
+                    <span style="font-size:10px; color:#A5D6A7;">Rank</span>
+                </div>
+
+                <!-- 2) Level + XP row (Middle of Widget) -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                     <span style="font-size:12px;">Level <span id="level-display">0</span></span>
-                    <span style="font-size:11px;"><span id="xp-display">0</span>/<span id="max-xp-display">100</span> XP</span>
+                    <span style="font-size:11px;">
+                        <span id="xp-display">0</span>/<span id="max-xp-display">100</span> XP
+                    </span>
                 </div>
+
+                <!-- 4) XP BAR (Bottom of Widget) -->
                 <div style="height:10px; width:100%; background:#1B5E20; border-radius:5px; overflow:hidden;">
-                    <div id="xp-bar" style="width:0%; height:100%; background:#4caf50; transition: width 0.5s ease;"></div>
+                    <div
+                        id="xp-bar"
+                        style="
+                            width:0%;
+                            height:100%;
+                            background:#00e5ff;
+                            box-shadow: 0 0 8px #00e5ff;
+                            transition: width 0.4s ease, box-shadow 0.4s ease;
+                        "
+                    ></div>
                 </div>
             </div>
-            
-            <div style="font-size:10px; color:#A5D6A7; text-align:center; margin-bottom:8px;">
-                Features: Grade Bonuses • Timing Rewards • Visual Feedback
-            </div>
-            
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom:8px;">
-                <button id="testBonus" style="background:#43a047; border:none; color:white; border-radius:6px; padding:6px; cursor:pointer; font-size:11px; font-weight:bold;">Test Bonus</button>
-                <button id="showStats" style="background:#2196F3; border:none; color:white; border-radius:6px; padding:6px; cursor:pointer; font-size:11px; font-weight:bold;">View Stats</button>
-            </div>
-        `;
+
+            `;
 
         document.body.appendChild(widget);
+
+        // Pulls latest XP from storage right away to ensure sync
+        syncXpFromStorageToWidget();
+
         console.log("[Canvas Royale] Canvas Royale widget created successfully!");
 
         setupEventListeners(widget);
@@ -219,25 +264,42 @@
     }
 
     function setupEventListeners(widget) {
-        // Test Bonus button
-        widget.querySelector("#testBonus").addEventListener("click", function () {
+    if (!widget) return;
+
+    // Test Bonus button
+    const testBonusBtn = widget.querySelector("#testBonus");
+    if (testBonusBtn) {
+        testBonusBtn.addEventListener("click", function () {
             console.log("[Canvas Royale] Test Bonus clicked");
-            // Test XP award with bonuses
             awardSubmissionXp(75, "test bonus");
         });
+    }
 
-        // View Stats button  
-        widget.querySelector("#showStats").addEventListener("click", function () {
+    // View Stats button
+    const showStatsBtn = widget.querySelector("#showStats");
+    if (showStatsBtn) {
+        showStatsBtn.addEventListener("click", function () {
             console.log("[Canvas Royale] View Stats clicked");
-            chrome.storage.local.get([XP_STATE_KEY, AWARDED_ASSIGNMENTS_KEY], (result) => {
-                const xpState = result[XP_STATE_KEY] || BASE_STATE;
-                const awarded = result[AWARDED_ASSIGNMENTS_KEY] || {};
-                const assignmentCount = Object.keys(awarded).length;
-                
-                alert(`Canvas Royale Stats:\nLevel: ${xpState.level}\nXP: ${xpState.xp}/${xpState.maxXp}\nAssignments Completed: ${assignmentCount}`);
-            });
+
+            chrome.storage.local.get(
+                [XP_STATE_KEY, AWARDED_ASSIGNMENTS_KEY], 
+                (result) => {
+                    const xpState = result[XP_STATE_KEY] || BASE_STATE;
+                    const awarded = result[AWARDED_ASSIGNMENTS_KEY] || {};
+                    const assignmentCount = Object.keys(awarded).length;
+
+                    alert(
+                        `Canvas Royale Stats:\n` +
+                        `Level: ${xpState.level}\n` +
+                        `XP: ${xpState.xp}/${xpState.maxXp}\n` +
+                        `Assignments Completed: ${assignmentCount}`
+                    );
+                }
+            );
         });
     }
+}
+
 
     function loadInitialData(widget) {
         if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -251,27 +313,129 @@
     }
 
     function updateDisplay(widget, xp, maxXp, level) {
-        const progress = xp % (maxXp || 100);
-        const percentage = maxXp ? (progress / maxXp) * 100 : 0;
+    if (!widget) return;
 
-        // Update level display
-        const levelDisplay = widget.querySelector("#level-display");
-        if (levelDisplay) levelDisplay.textContent = level;
+    // ---- Safety-normalized values ----
+    const safeLevel = (typeof level === "number" && level > 0) ? level : 1;
+    const safeMaxXp = (typeof maxXp === "number" && maxXp > 0) ? maxXp : 100;
+    const safeXp = (typeof xp === "number" && xp >= 0) ? xp : 0;
 
-        // Update XP display
-        const xpDisplay = widget.querySelector("#xp-display");
-        if (xpDisplay) xpDisplay.textContent = progress;
+    const progress = safeXp % safeMaxXp;
+    const percentage = (progress / safeMaxXp) * 100;
 
-        // Update max XP display
-        const maxXpDisplay = widget.querySelector("#max-xp-display");
-        if (maxXpDisplay) maxXpDisplay.textContent = maxXp || 100;
+    // ---- Level / XP text ----
+    const levelDisplay = widget.querySelector("#level-display");
+    if (levelDisplay) levelDisplay.textContent = safeLevel;
 
-        // Update XP bar
-        const xpBar = widget.querySelector("#xp-bar");
-        if (xpBar) {
-            xpBar.style.width = percentage + '%';
-        }
+    const xpDisplay = widget.querySelector("#xp-display");
+    if (xpDisplay) xpDisplay.textContent = progress;
+
+    const maxXpDisplay = widget.querySelector("#max-xp-display");
+    if (maxXpDisplay) maxXpDisplay.textContent = safeMaxXp;
+
+    // ---- XP bar ----
+    const xpBar = widget.querySelector("#xp-bar");
+    if (xpBar) { 
+        xpBar.style.width = percentage + "%";
+
+    
+    // XP Gain Glow – brief boost when XP changes
+    xpBar.classList.add("xp-gain-flash");
+    setTimeout(() => {
+        xpBar.classList.remove("xp-gain-flash");
+    }, 300);
+
     }
+
+    // ---- Rank name + icon (based on level) ----
+    const rankNameEl = widget.querySelector("#rank-name");
+    const rankIconEl = widget.querySelector("#rank-icon");
+
+    if (typeof getRankForLevel === "function") {
+        const rank = getRankForLevel(safeLevel);
+
+        // Rank text (Bronze / Silver / etc.)
+        if (rankNameEl && rank && rank.name) {
+            rankNameEl.textContent = rank.name;
+        }
+
+        // Rank icon
+        if (rankIconEl && rank) {
+            try {
+                const iconUrl = getRankIconPath(rank);
+                if (iconUrl) {
+                    rankIconEl.src = iconUrl;
+                }
+            } catch (e) {
+                console.warn("[Canvas Royale] Could not resolve rank icon:", e);
+            }
+
+            rankIconEl.alt = (rank.name || "Rank") + " rank badge";
+
+            // Make icon slowly grow as level increases
+            const baseSize = 28;
+            const bonus = Math.min(32, Math.floor((safeLevel - 1) / 5) * 6); // +6px every 5 levels, capped
+            const size = baseSize + bonus;
+
+            rankIconEl.style.width = size + "px";
+            rankIconEl.style.height = size + "px";
+        }
+
+        if (rank && rank.name) {
+            // Make sure the widget itself can show strong glow
+            widget.style.borderRadius = "12px";
+            widget.style.overflow = "visible";
+
+            switch (rank.name) {
+                case "Bronze":
+                    widget.style.boxShadow =
+                        "0 0 20px rgba(205, 127, 50, 1), 0 0 40px rgba(205, 127, 50, 0.95)";
+                    break;
+                case "Silver":
+                    widget.style.boxShadow =
+                        "0 0 22px rgba(192, 192, 192, 1), 0 0 44px rgba(224, 224, 224, 1)";
+                    break;
+                case "Gold":
+                    widget.style.boxShadow =
+                        "0 0 24px rgba(255, 215, 0, 1), 0 0 50px rgba(255, 235, 59, 1)";
+                    break;
+                case "Platinum":
+                    widget.style.boxShadow =
+                        "0 0 26px rgba(187, 222, 251, 1), 0 0 52px rgba(144, 202, 249, 1)";
+                    break;
+                case "Diamond":
+                    widget.style.boxShadow =
+                        "0 0 30px rgba(129, 212, 250, 1), 0 0 60px rgba(224, 247, 250, 1)";
+                    break;
+                default:
+                    widget.style.boxShadow = "0 0 14px rgba(0,0,0,0.8)";
+            }
+}
+
+
+    }
+}
+
+    function syncXpFromStorageToWidget() {
+    const widget = document.getElementById("canvas-royale-widget");
+    if (!widget) return;
+
+    chrome.storage.local.get(["xpState"], (result) => {
+        const state = result.xpState || {};
+
+        const xp = typeof state.xp === "number" ? state.xp : 0;
+        const maxXp = typeof state.maxXp === "number" ? state.maxXp : 100;
+        const level = typeof state.level === "number" ? state.level : 1;
+
+        updateDisplay(widget, xp, maxXp, level);
+    });
+}
+
+    // Re-sync XP widget when navigating with back/forward buttons
+    window.addEventListener("pageshow", () => {
+    syncXpFromStorageToWidget();
+});
+
 
     // Function to update bonus XP display (simplified - bonuses work behind the scenes)
     function updateBonusXPDisplay(widget, totalBonus, gradeBonus, timingBonus) {

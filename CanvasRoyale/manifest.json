@@ -18,7 +18,7 @@
     "content_scripts": [
         {
             "matches": ["https://*.instructure.com/*"],
-            "js": ["content.js", "bonusXp.js"],
+            "js": ["content.js", "bonusXp.js", "Ranks.js"],
             "run_at": "document_end"
         }
     ],
@@ -28,7 +28,7 @@
     },
     "web_accessible_resources": [
         {
-            "resources": ["content.js", "bonusXp.js"],
+            "resources": ["content.js", "bonusXp.js", "Ranks.js", "Assets/*.png"],
             "matches": ["https://*.instructure.com/*"]
         }
     ]

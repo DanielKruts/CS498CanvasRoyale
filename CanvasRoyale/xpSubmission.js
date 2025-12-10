@@ -16,6 +16,9 @@ const BASE_STATE = {
   xp: 0,
   maxXp: 100,
   level: 1,
+  totalXp: 0,          // total lifetime XP
+  streakDays: 0,       // current streak length in days
+  lastActiveDate: null // "YYYY-MM-DD" of last XP gain
 };
 
 
